@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddEndpoints()
+    .AddPersistence(builder.Configuration)
     .AddJwtAndApiKeyAuth(builder.Configuration)
     .AddSwaggerWithAuth();
 

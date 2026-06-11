@@ -43,11 +43,14 @@ public static class SwaggerExtensions
 
     public static WebApplication UseSwaggerWithAuth(this WebApplication app)
     {
+        app.UseStaticFiles();
         app.UseSwagger();
         app.UseSwaggerUI(options =>
         {
             options.SwaggerEndpoint("/swagger/v1/swagger.json", "HookSentry API v1");
             options.RoutePrefix = "swagger";
+            options.InjectStylesheet("/swagger/custom.css");
+            options.InjectJavascript("/swagger/custom.js");
         });
 
         return app;

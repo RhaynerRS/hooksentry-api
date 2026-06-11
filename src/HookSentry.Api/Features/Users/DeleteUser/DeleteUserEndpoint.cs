@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.Features.Users.Domain;
 
 namespace HookSentry.Api.Features.Users.DeleteUser;
@@ -41,14 +42,7 @@ public class DeleteUserEndpoint : IEndpoint
         NHibernate.ISession session,
         CancellationToken ct)
     {
-        if (!Guid.TryParse(principal.FindFirst("tenant_id")?.Value, out var tenantId))
-            return Results.Unauthorized();
-
-        if (!Enum.TryParse<UserRole>(principal.FindFirst("role")?.Value, ignoreCase: true, out var callerRole))
-            return Results.Unauthorized();
-
-        if (callerRole != UserRole.Admin)
-            return Results.Forbid();
+        if (principal.RequireAdminRole(out var tenantId) is { } err) return err;
 
         using var tx = session.BeginTransaction();
 

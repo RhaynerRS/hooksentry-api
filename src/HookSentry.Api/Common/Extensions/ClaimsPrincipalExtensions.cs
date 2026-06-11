@@ -1,0 +1,25 @@
+using System.Security.Claims;
+using HookSentry.Api.Features.Users.Domain;
+
+namespace HookSentry.Api.Common.Extensions;
+
+public static class ClaimsPrincipalExtensions
+{
+    public static IResult? RequireTenantId(this ClaimsPrincipal principal, out Guid tenantId)
+    {
+        if (!Guid.TryParse(principal.FindFirst("tenant_id")?.Value, out tenantId))
+            return Results.Unauthorized();
+        return null;
+    }
+
+    public static IResult? RequireAdminRole(this ClaimsPrincipal principal, out Guid tenantId)
+    {
+        if (!Guid.TryParse(principal.FindFirst("tenant_id")?.Value, out tenantId))
+            return Results.Unauthorized();
+        if (!Enum.TryParse<UserRole>(principal.FindFirst("role")?.Value, ignoreCase: true, out var role))
+            return Results.Unauthorized();
+        if (role != UserRole.Admin)
+            return Results.Forbid();
+        return null;
+    }
+}

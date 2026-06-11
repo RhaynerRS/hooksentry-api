@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.Common.Security;
 using HookSentry.Api.DataTransfer.Users.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
@@ -54,8 +55,7 @@ public class UpdateUserEndpoint : IEndpoint
         NHibernate.ISession session,
         CancellationToken ct)
     {
-        if (!Guid.TryParse(principal.FindFirst("tenant_id")?.Value, out var tenantId))
-            return Results.Unauthorized();
+        if (principal.RequireTenantId(out var tenantId) is { } err) return err;
 
         using var tx = session.BeginTransaction();
 

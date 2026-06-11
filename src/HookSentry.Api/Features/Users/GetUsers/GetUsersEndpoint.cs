@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using HookSentry.Api.Common.DTOs;
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.DataTransfer.Users.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
 using HookSentry.Api.Features.Users.Domain;
@@ -49,8 +50,7 @@ public class GetUsersEndpoint : IEndpoint
         NHibernate.ISession session,
         CancellationToken ct)
     {
-        if (!Guid.TryParse(principal.FindFirst("tenant_id")?.Value, out var tenantId))
-            return Results.Unauthorized();
+        if (principal.RequireTenantId(out var tenantId) is { } err) return err;
 
         var query = session.Query<User>().Where(u => u.TenantId == tenantId);
 

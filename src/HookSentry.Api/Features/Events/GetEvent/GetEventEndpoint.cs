@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.DataTransfer.Events.Responses;
 using HookSentry.Api.Features.Events.Domain;
 namespace HookSentry.Api.Features.Events.GetEvent;
@@ -33,8 +34,7 @@ public class GetEventEndpoint : IEndpoint
         NHibernate.ISession session,
         CancellationToken ct)
     {
-        if (!Guid.TryParse(user.FindFirst("tenant_id")?.Value, out var tenantId))
-            return Results.Unauthorized();
+        if (user.RequireTenantId(out var tenantId) is { } err) return err;
 
         var evento = await session.GetAsync<Event>(id, ct);
 

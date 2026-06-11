@@ -14,6 +14,21 @@ public class CreateTenantEndpoint : IEndpoint
         app.MapPost("/api/v1/tenants", Handle)
             .WithName("CreateTenant")
             .WithTags("Tenants")
+            .WithSummary("Cadastra um novo tenant")
+            .WithDescription("""
+                Cria um novo tenant e gera automaticamente seu `webhook_secret` (HMAC-SHA256).
+
+                **Não requer autenticação.**
+
+                **Body:**
+                - `name` *(obrigatório)*: nome único da organização
+                - `maxTrys` *(opcional, padrão: 10)*: número máximo de tentativas antes da DLQ
+                - `circuitBreakerTimer` *(opcional, padrão: 300)*: duração em segundos do estado OPEN do Circuit Breaker
+
+                **Códigos de retorno:**
+                - `201 Created`: tenant criado — inclui o `webhookSecret` gerado
+                - `409 Conflict`: já existe um tenant com o mesmo nome
+                """)
             .AllowAnonymous()
             .Produces<CreateTenantResponse>(StatusCodes.Status201Created)
             .Produces<string>(StatusCodes.Status409Conflict);

@@ -14,6 +14,22 @@ public class CreateDestinationEndpoint : IEndpoint
         app.MapPost("/api/v1/destinations", Handle)
             .WithName("CreateDestination")
             .WithTags("Destinations")
+            .WithSummary("Cadastra uma nova URL de destino para o tenant autenticado")
+            .WithDescription("""
+                Registra uma URL HTTPS de destino para receber webhooks entregues pelo HookSentry.
+
+                **Body:**
+                - `url` *(obrigatório)*: URL HTTPS válida do endpoint de destino
+                - `serverRateLimit` *(opcional, padrão: 5)*: número máximo de requisições simultâneas ao destino (RF-006)
+
+                A URL é criada com status `Active`. O tenant autenticado é extraído do claim `tenant_id` do JWT.
+
+                **Códigos de retorno:**
+                - `201 Created`: URL de destino criada
+                - `400 Bad Request`: URL inválida ou não-HTTPS
+                - `401 Unauthorized`: token ausente ou inválido
+                - `404 Not Found`: tenant não encontrado
+                """)
             .RequireAuthorization()
             .Produces<DestinationResponse>(StatusCodes.Status201Created)
             .Produces<string>(StatusCodes.Status400BadRequest)

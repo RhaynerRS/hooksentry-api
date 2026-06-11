@@ -13,6 +13,26 @@ public class UpdateDestinationEndpoint : IEndpoint
         app.MapPatch("/api/v1/destinations/{id:guid}", Handle)
             .WithName("UpdateDestination")
             .WithTags("Destinations")
+            .WithSummary("Atualiza campos de uma URL de destino")
+            .WithDescription("""
+                Atualiza parcialmente uma URL de destino pertencente ao tenant autenticado.
+
+                **Parâmetros de rota:**
+                - `id` *(obrigatório)*: UUID da URL de destino
+
+                **Body** *(todos os campos são opcionais):*
+                - `url`: nova URL HTTPS válida
+                - `serverRateLimit`: novo limite de requisições simultâneas (mínimo: 1)
+                - `status`: `active` ou `inactive` — o valor `suspended` é gerenciado exclusivamente
+                  pelo Circuit Breaker (RF-011) e não pode ser definido manualmente
+
+                **Códigos de retorno:**
+                - `200 OK`: URL de destino atualizada
+                - `400 Bad Request`: valor inválido ou status não permitido
+                - `401 Unauthorized`: token ausente ou inválido
+                - `403 Forbidden`: URL de destino pertence a outro tenant (RNF-007)
+                - `404 Not Found`: URL de destino não encontrada
+                """)
             .RequireAuthorization()
             .Produces<DestinationResponse>()
             .Produces<string>(StatusCodes.Status400BadRequest)

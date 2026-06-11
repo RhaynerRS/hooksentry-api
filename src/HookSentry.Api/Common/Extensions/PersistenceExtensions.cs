@@ -13,7 +13,7 @@ public static class PersistenceExtensions
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
         var sessionFactory = Fluently.Configure()
-            .Database(PostgreSQLConfiguration.Standard
+            .Database(PostgreSQLConfiguration.PostgreSQL82
                 .ConnectionString(connectionString))
             .Mappings(m => m.FluentMappings.AddFromAssemblyOf<TenantMap>())
             .BuildSessionFactory();

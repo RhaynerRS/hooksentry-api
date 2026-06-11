@@ -8,6 +8,7 @@ public class DestinationUrlMap : ClassMap<DestinationUrl>
     public DestinationUrlMap()
     {
         Table("urls_destino");
+        Not.LazyLoad();
 
         Id(x => x.Id, "id").GeneratedBy.Assigned();
 

@@ -4,15 +4,15 @@ namespace HookSentry.Api.Features.Tenants.Domain;
 
 public class Tenant
 {
-    public Guid Id { get; private set; }
-    public string Name { get; private set; } = default!;
-    public string WebhookSecret { get; private set; } = default!;
-    public int MaxTrys { get; private set; }
-    public int CircuitBreakerTimer { get; private set; }
-    public DateTimeOffset CreatedAt { get; private set; }
-    public DateTimeOffset UpdatedAt { get; private set; }
+    public virtual Guid Id { get; protected set; }
+    public virtual string Name { get; protected set; } = default!;
+    public virtual string WebhookSecret { get; protected set; } = default!;
+    public virtual int MaxTrys { get; protected set; }
+    public virtual int CircuitBreakerTimer { get; protected set; }
+    public virtual DateTimeOffset CreatedAt { get; protected set; }
+    public virtual DateTimeOffset UpdatedAt { get; protected set; }
 
-    private Tenant() { }
+    protected Tenant() { }
 
     public Tenant(string name, int maxTrys = 10, int circuitBreakerTimer = 300)
     {
@@ -24,14 +24,14 @@ public class Tenant
         CreatedAt = UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void UpdateSettings(int maxTrys, int circuitBreakerTimer)
+    public virtual void UpdateSettings(int maxTrys, int circuitBreakerTimer)
     {
         MaxTrys = maxTrys;
         CircuitBreakerTimer = circuitBreakerTimer;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void RotateWebhookSecret()
+    public virtual void RotateWebhookSecret()
     {
         WebhookSecret = GenerateWebhookSecret();
         UpdatedAt = DateTimeOffset.UtcNow;

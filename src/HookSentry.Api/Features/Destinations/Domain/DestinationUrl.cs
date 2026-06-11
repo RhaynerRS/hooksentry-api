@@ -2,15 +2,15 @@ namespace HookSentry.Api.Features.Destinations.Domain;
 
 public class DestinationUrl
 {
-    public Guid Id { get; private set; }
-    public Guid TenantId { get; private set; }
-    public string Url { get; private set; } = default!;
-    public DestinationUrlStatus Status { get; private set; }
-    public int ServerRateLimit { get; private set; }
-    public DateTimeOffset CreatedAt { get; private set; }
-    public DateTimeOffset UpdatedAt { get; private set; }
+    public virtual Guid Id { get; protected set; }
+    public virtual Guid TenantId { get; protected set; }
+    public virtual string Url { get; protected set; } = default!;
+    public virtual DestinationUrlStatus Status { get; protected set; }
+    public virtual int ServerRateLimit { get; protected set; }
+    public virtual DateTimeOffset CreatedAt { get; protected set; }
+    public virtual DateTimeOffset UpdatedAt { get; protected set; }
 
-    private DestinationUrl() { }
+    protected DestinationUrl() { }
 
     public DestinationUrl(Guid tenantId, string url, int serverRateLimit = 5)
     {
@@ -25,34 +25,34 @@ public class DestinationUrl
         CreatedAt = UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public bool IsActive() => Status == DestinationUrlStatus.Active;
+    public virtual bool IsActive() => Status == DestinationUrlStatus.Active;
 
-    public void Activate()
+    public virtual void Activate()
     {
         Status = DestinationUrlStatus.Active;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void Deactivate()
+    public virtual void Deactivate()
     {
         Status = DestinationUrlStatus.Inactive;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void Suspend()
+    public virtual void Suspend()
     {
         Status = DestinationUrlStatus.Suspended;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void SetUrl(string url)
+    public virtual void SetUrl(string url)
     {
         ValidateUrl(url);
         Url = url;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public void SetTenantId(Guid tenantId)
+    public virtual void SetTenantId(Guid tenantId)
     {
         if (tenantId == Guid.Empty)
             throw new ArgumentException("TenantId não pode ser vazio.", nameof(tenantId));
@@ -60,7 +60,7 @@ public class DestinationUrl
         TenantId = tenantId;
     }
 
-    public void SetServerRateLimit(int limit)
+    public virtual void SetServerRateLimit(int limit)
     {
         ValidateServerRateLimit(limit);
         ServerRateLimit = limit;

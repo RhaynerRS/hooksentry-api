@@ -8,6 +8,7 @@ public class TenantMap : ClassMap<Tenant>
     public TenantMap()
     {
         Table("tenants");
+        Not.LazyLoad();
 
         Id(x => x.Id, "id").GeneratedBy.Assigned();
 

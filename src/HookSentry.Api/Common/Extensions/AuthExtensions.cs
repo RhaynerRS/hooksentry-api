@@ -8,6 +8,8 @@ namespace HookSentry.Api.Common.Extensions;
 public static class AuthExtensions
 {
     public const string ApiKeyScheme = "ApiKey";
+    public const string RefreshKeyPrefix = "auth:refresh:";
+    public static readonly TimeSpan RefreshTokenTtl = TimeSpan.FromDays(7);
 
     public static IServiceCollection AddJwtAndApiKeyAuth(this IServiceCollection services, IConfiguration configuration)
     {

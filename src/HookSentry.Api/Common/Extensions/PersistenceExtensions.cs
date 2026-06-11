@@ -1,5 +1,6 @@
 using FluentNHibernate.Cfg;
 using FluentNHibernate.Cfg.Db;
+using HookSentry.Api.Common.Persistence;
 using HookSentry.Api.Features.Tenants.Persistence;
 using NHibernate;
 
@@ -15,7 +16,9 @@ public static class PersistenceExtensions
         var sessionFactory = Fluently.Configure()
             .Database(PostgreSQLConfiguration.PostgreSQL82
                 .ConnectionString(connectionString))
-            .Mappings(m => m.FluentMappings.AddFromAssemblyOf<TenantMap>())
+            .Mappings(m => m.FluentMappings
+                .AddFromAssemblyOf<TenantMap>()
+                .Conventions.Add<DateTimeOffsetConvention>())
             .BuildSessionFactory();
 
         services.AddSingleton(sessionFactory);

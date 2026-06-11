@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddEndpoints()
     .AddPersistence(builder.Configuration)
+    .AddRedis(builder.Configuration)
     .AddSecurity()
     .AddJwtAndApiKeyAuth(builder.Configuration)
     .AddSwaggerWithAuth();

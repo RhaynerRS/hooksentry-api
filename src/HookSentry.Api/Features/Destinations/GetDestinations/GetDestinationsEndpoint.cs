@@ -1,0 +1,75 @@
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Security.Claims;
+using HookSentry.Api.Common.DTOs;
+using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.DataTransfer.Destinations.Requests;
+using HookSentry.Api.DataTransfer.Destinations.Responses;
+using HookSentry.Api.Features.Destinations.Domain;
+using NHibernate.Linq;
+
+namespace HookSentry.Api.Features.Destinations.GetDestinations;
+
+public class GetDestinationsEndpoint : IEndpoint
+{
+    public void MapEndpoints(IEndpointRouteBuilder app)
+    {
+        app.MapGet("/api/v1/destinations", Handle)
+            .WithName("GetDestinations")
+            .WithTags("Destinations")
+            .RequireAuthorization()
+            .Produces<PaginationResponse<DestinationResponse>>()
+            .Produces(StatusCodes.Status401Unauthorized);
+    }
+
+    private static async Task<IResult> Handle(
+        [AsParameters] GetDestinationsRequest request,
+        ClaimsPrincipal user,
+        NHibernate.ISession session,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(user.FindFirst("tenant_id")?.Value, out var tenantId))
+            return Results.Unauthorized();
+
+        var baseQuery = session.Query<DestinationUrl>()
+            .Where(d => d.TenantId == tenantId);
+
+        var total = await baseQuery.CountAsync(ct);
+
+        List<DestinationUrl> items;
+        try
+        {
+            items = await ApplyOrdering(baseQuery, request)
+                .Skip((request.Pg - 1) * request.Qt)
+                .Take(request.Qt)
+                .ToListAsync(ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.BadRequest(ex.Message);
+        }
+
+        return Results.Ok(new PaginationResponse<DestinationResponse>(
+            total,
+            [..items.Select(DestinationResponse.From)]));
+    }
+
+    private static IQueryable<DestinationUrl> ApplyOrdering(
+        IQueryable<DestinationUrl> query, PaginationRequest request)
+    {
+        var prop = typeof(DestinationUrl).GetProperty(
+            request.CpOrd,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
+            ?? throw new ArgumentException($"'{request.CpOrd}' is not a valid sort column.");
+
+        var param = Expression.Parameter(typeof(DestinationUrl), "d");
+        var keySelector = Expression.Lambda<Func<DestinationUrl, object>>(
+            Expression.Convert(Expression.Property(param, prop), typeof(object)),
+            param);
+
+        return request.TpOrd == SortOrder.Asc
+            ? query.OrderBy(keySelector)
+            : query.OrderByDescending(keySelector);
+    }
+}
+

@@ -1,4 +1,6 @@
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.DataTransfer.Tenants.Requests;
+using HookSentry.Api.DataTransfer.Tenants.Responses;
 using HookSentry.Api.Features.Tenants.Domain;
 using NHibernate;
 using NHibernate.Linq;
@@ -46,15 +48,3 @@ public class CreateTenantEndpoint : IEndpoint
     }
 }
 
-public record CreateTenantRequest(
-    string Name,
-    int MaxTrys = 10,
-    int CircuitBreakerTimer = 300);
-
-public record CreateTenantResponse(
-    Guid Id,
-    string Name,
-    string WebhookSecret,
-    int MaxTrys,
-    int CircuitBreakerTimer,
-    DateTimeOffset CreatedAt);

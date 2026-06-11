@@ -1,4 +1,5 @@
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.DataTransfer.Tenants.Responses;
 using HookSentry.Api.Features.Tenants.Domain;
 using NHibernate;
 
@@ -35,10 +36,3 @@ public class GetTenantEndpoint : IEndpoint
     }
 }
 
-public record TenantResponse(
-    Guid Id,
-    string Name,
-    int MaxTrys,
-    int CircuitBreakerTimer,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);

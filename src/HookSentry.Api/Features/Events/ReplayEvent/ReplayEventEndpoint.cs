@@ -52,11 +52,9 @@ public class ReplayEventEndpoint : IEndpoint
         if (evento is null)
             return Results.NotFound();
 
-        // RNF-007: ownership check
         if (evento.TenantId != tenantId)
             return Results.Forbid();
 
-        // RF-013: somente eventos com status CriticalFailure podem ser reenviados
         try
         {
             evento.ResetForReplay();

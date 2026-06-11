@@ -54,7 +54,6 @@ public class CreateEventEndpoint : IEndpoint
         if (!Guid.TryParse(user.FindFirst("tenant_id")?.Value, out var tenantId))
             return Results.Unauthorized();
 
-        // RNF-005: verificar idempotência via header X-Idempotency-Key
         var idempotencyKey = httpRequest.Headers["X-Idempotency-Key"].FirstOrDefault();
         if (idempotencyKey is not null)
         {
@@ -66,7 +65,6 @@ public class CreateEventEndpoint : IEndpoint
                 return Results.Ok(new EventAcceptedResponse(existing.Id, existing.Status.ToString(), existing.AcceptedAt));
         }
 
-        // RF-003: validar URL de destino
         var destination = await session.GetAsync<DestinationUrl>(request.DestinationUrlId, ct);
 
         if (destination is null)

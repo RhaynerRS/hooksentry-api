@@ -56,7 +56,6 @@ public class Event
         Payload = payload;
     }
 
-    // RF-013: reprocessamento manual — somente eventos com status CriticalFailure
     public virtual void ResetForReplay()
     {
         if (Status != EventStatus.CriticalFailure)
@@ -68,7 +67,6 @@ public class Event
         Status = EventStatus.Pending;
     }
 
-    // RF-014: cancelamento em purga de fila
     public virtual void Cancel()
     {
         if (Status != EventStatus.Pending && Status != EventStatus.WaitingRetry)

@@ -41,7 +41,6 @@ public class GetEventEndpoint : IEndpoint
         if (evento is null)
             return Results.NotFound();
 
-        // RNF-007: ownership check
         if (evento.TenantId != tenantId)
             return Results.Forbid();
 

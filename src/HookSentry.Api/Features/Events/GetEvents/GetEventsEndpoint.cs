@@ -50,7 +50,6 @@ public class GetEventsEndpoint : IEndpoint
 
         var baseQuery = session.Query<Event>().Where(e => e.TenantId == tenantId);
 
-        // RF-012: filtros por status, período e URL de destino
         if (request.Status is not null)
         {
             if (!Enum.TryParse<EventStatus>(request.Status, ignoreCase: true, out var parsedStatus))

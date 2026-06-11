@@ -58,7 +58,6 @@ public class UpdateDestinationEndpoint : IEndpoint
         if (destination is null)
             return Results.NotFound();
 
-        // RNF-007: ownership check — tenant cannot access another tenant's resource
         if (destination.TenantId != tenantId)
             return Results.Forbid();
 
@@ -81,7 +80,6 @@ public class UpdateDestinationEndpoint : IEndpoint
                         destination.Deactivate();
                         break;
                     case "suspended":
-                        // RF-011: suspended state is managed exclusively by the circuit breaker
                         return Results.BadRequest(
                             "Status 'suspended' is managed by the circuit breaker (RF-011). Use 'active' or 'inactive'.");
                     default:

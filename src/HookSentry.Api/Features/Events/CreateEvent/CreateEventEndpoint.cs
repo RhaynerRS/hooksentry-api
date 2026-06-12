@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.RabbitMq;
 using HookSentry.Api.DataTransfer.Events.Requests;
 using HookSentry.Api.DataTransfer.Events.Responses;
 using HookSentry.Api.Features.Destinations.Domain;
@@ -50,6 +51,7 @@ public class CreateEventEndpoint : IEndpoint
         ClaimsPrincipal user,
         HttpRequest httpRequest,
         NHibernate.ISession session,
+        IEventPublisher publisher,
         CancellationToken ct)
     {
         if (user.RequireTenantId(out var tenantId) is { } err) return err;
@@ -89,6 +91,15 @@ public class CreateEventEndpoint : IEndpoint
         using var tx = session.BeginTransaction();
         await session.SaveAsync(evento, ct);
         await tx.CommitAsync(ct);
+
+        await publisher.PublishAsync(new EventMessage(
+            EventId: evento.Id,
+            TenantId: evento.TenantId,
+            DestinationUrlId: evento.DestinationUrlId,
+            DestinationUrl: destination.Url,
+            Payload: evento.Payload,
+            RetryCount: evento.CurrentRetryCount
+        ), ct);
 
         return Results.Accepted(
             $"/api/v1/events/{evento.Id}",

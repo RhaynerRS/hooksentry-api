@@ -1,5 +1,7 @@
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.RabbitMq;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,9 +11,14 @@ builder.Services
     .AddRedis(builder.Configuration)
     .AddSecurity()
     .AddJwtAndApiKeyAuth(builder.Configuration)
-    .AddSwaggerWithAuth();
+    .AddSwaggerWithAuth()
+    .AddRabbitMq(builder.Configuration);
 
 var app = builder.Build();
+
+var mqConn = app.Services.GetRequiredService<RabbitMqConnection>();
+var mqSettings = app.Services.GetRequiredService<IOptions<RabbitMqSettings>>().Value;
+await mqConn.ConnectAsync(mqSettings, CancellationToken.None);
 
 app.UseSwaggerWithAuth();
 app.UseHttpsRedirection();

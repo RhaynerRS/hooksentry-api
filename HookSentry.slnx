@@ -2,5 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/HookSentry.Api/HookSentry.Api.csproj" />
     <Project Path="src/HookSentry.Tests/HookSentry.Tests.csproj" />
+    <Project Path="src/HookSentry.Worker/HookSentry.Worker.csproj" />
   </Folder>
 </Solution>

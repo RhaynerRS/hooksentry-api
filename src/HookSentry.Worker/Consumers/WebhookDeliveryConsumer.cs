@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -23,6 +24,7 @@ public sealed class WebhookDeliveryConsumer(
     ILogger<WebhookDeliveryConsumer> logger) : BackgroundService
 {
     private readonly string _exchange = options.Value.EventsExchange;
+    private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _semaphores = new();
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -52,7 +54,7 @@ public sealed class WebhookDeliveryConsumer(
 
         await DeclareDelayQueuesAsync(channel, stoppingToken);
 
-        await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false,
+        await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: options.Value.PrefetchCount, global: false,
             cancellationToken: stoppingToken);
 
         var consumer = new AsyncEventingBasicConsumer(channel);
@@ -75,14 +77,24 @@ public sealed class WebhookDeliveryConsumer(
                     "Event received: {EventId} -> {DestinationUrl} (retry #{RetryCount})",
                     message.EventId, message.DestinationUrl, message.RetryCount);
 
-                using var httpClient = new HttpClient();
-                await ApplyAuthAsync(httpClient, message);
+                var semaphore = GetSemaphore(message.DestinationUrlId, message.ServerRateLimit);
+                await semaphore.WaitAsync(stoppingToken);
+                HttpResponseMessage response;
+                try
+                {
+                    using var httpClient = new HttpClient();
+                    await ApplyAuthAsync(httpClient, message);
 
-                var signature = ComputeSignature(message.WebhookSecret, message.Payload);
-                httpClient.DefaultRequestHeaders.Add("X-HookSentry-Signature", signature);
+                    var signature = ComputeSignature(message.WebhookSecret, message.Payload);
+                    httpClient.DefaultRequestHeaders.Add("X-HookSentry-Signature", signature);
 
-                var content = new StringContent(message.Payload, Encoding.UTF8, "application/json");
-                var response = await httpClient.PostAsync(message.DestinationUrl, content, stoppingToken);
+                    var content = new StringContent(message.Payload, Encoding.UTF8, "application/json");
+                    response = await httpClient.PostAsync(message.DestinationUrl, content, stoppingToken);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
 
                 if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
                 {
@@ -167,6 +179,9 @@ public sealed class WebhookDeliveryConsumer(
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
+
+    private SemaphoreSlim GetSemaphore(Guid destinationId, int limit)
+        => _semaphores.GetOrAdd(destinationId, _ => new SemaphoreSlim(limit, limit));
 
     private static string ComputeSignature(string secret, string payload)
     {

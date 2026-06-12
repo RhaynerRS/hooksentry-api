@@ -8,4 +8,5 @@ public sealed class RabbitMqSettings
     public string Password { get; init; } = "guest";
     public string VirtualHost { get; init; } = "/";
     public string EventsExchange { get; init; } = "hooksentry.events";
+    public ushort PrefetchCount { get; init; } = 100;
 }

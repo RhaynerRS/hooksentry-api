@@ -113,8 +113,8 @@ public class IngestEndpoint : IEndpoint
             return Results.UnprocessableEntity($"Destination '{destination.Id}' is not active.");
 
         return await CreateAndPublishEvent(
-            tenantId, destination.Id, destination.Url, destination.AuthType,
-            destination.CredentialsEncrypted, payload.GetRawText(),
+            tenantId, destination.Id, destination.Url, destination.ServerRateLimit,
+            destination.AuthType, destination.CredentialsEncrypted, payload.GetRawText(),
             idempotencyKey, session, publisher, ct);
     }
 
@@ -142,14 +142,14 @@ public class IngestEndpoint : IEndpoint
         }
 
         return await CreateAndPublishEvent(
-            tenantId, destination.Id, destination.Url, destination.AuthType,
-            destination.CredentialsEncrypted, payloadJson,
+            tenantId, destination.Id, destination.Url, destination.ServerRateLimit,
+            destination.AuthType, destination.CredentialsEncrypted, payloadJson,
             idempotencyKey, session, publisher, ct);
     }
 
     private static async Task<IResult> CreateAndPublishEvent(
         Guid tenantId, Guid destinationId, string destinationUrl,
-        DestinationAuthType? authType, string? credentialsEncrypted,
+        int serverRateLimit, DestinationAuthType? authType, string? credentialsEncrypted,
         string payloadJson, string? idempotencyKey,
         NHibernate.ISession session, IEventPublisher publisher, CancellationToken ct)
     {
@@ -180,6 +180,7 @@ public class IngestEndpoint : IEndpoint
             RetryCount: evento.CurrentRetryCount,
             MaxTrys: tenant.MaxTrys,
             WebhookSecret: tenant.WebhookSecret,
+            ServerRateLimit: serverRateLimit,
             AuthType: authType,
             CredentialsEncrypted: credentialsEncrypted
         ), ct);

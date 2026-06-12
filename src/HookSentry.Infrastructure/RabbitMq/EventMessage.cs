@@ -11,6 +11,7 @@ public sealed record EventMessage(
     int RetryCount,
     int MaxTrys,
     string WebhookSecret,
+    int ServerRateLimit,
     DestinationAuthType? AuthType,
     string? CredentialsEncrypted
 );

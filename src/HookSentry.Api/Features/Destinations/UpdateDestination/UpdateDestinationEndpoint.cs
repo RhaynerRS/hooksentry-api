@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Security;
 using HookSentry.Api.DataTransfer.Destinations.Requests;
 using HookSentry.Api.DataTransfer.Destinations.Responses;
 using HookSentry.Api.Features.Destinations.Domain;
@@ -24,12 +26,14 @@ public class UpdateDestinationEndpoint : IEndpoint
                 **Body** *(todos os campos são opcionais):*
                 - `url`: nova URL HTTPS válida
                 - `serverRateLimit`: novo limite de requisições simultâneas (mínimo: 1)
-                - `status`: `active` ou `inactive` — o valor `suspended` é gerenciado exclusivamente
-                  pelo Circuit Breaker (RF-011) e não pode ser definido manualmente
+                - `status`: `active` ou `inactive` — `suspended` é gerenciado pelo Circuit Breaker (RF-011)
+                - `authType`: novo tipo de autenticação — `ApiKey`, `BearerToken`, `JwtBearer`, `BasicAuth`
+                - `credentials`: novo objeto JSON de credenciais (obrigatório se authType for informado)
+                - `removeAuth`: `true` para remover a autenticação configurada no destino
 
                 **Códigos de retorno:**
                 - `200 OK`: URL de destino atualizada
-                - `400 Bad Request`: valor inválido ou status não permitido
+                - `400 Bad Request`: valor inválido, authType desconhecido ou credenciais malformadas
                 - `401 Unauthorized`: token ausente ou inválido
                 - `403 Forbidden`: URL de destino pertence a outro tenant (RNF-007)
                 - `404 Not Found`: URL de destino não encontrada
@@ -47,6 +51,7 @@ public class UpdateDestinationEndpoint : IEndpoint
         UpdateDestinationRequest request,
         ClaimsPrincipal user,
         NHibernate.ISession session,
+        ICredentialEncryptionService encryption,
         CancellationToken ct)
     {
         if (user.RequireTenantId(out var tenantId) is { } err) return err;
@@ -81,11 +86,34 @@ public class UpdateDestinationEndpoint : IEndpoint
                         break;
                     case "suspended":
                         return Results.BadRequest(
-                            "Status 'suspended' is managed by the circuit breaker (RF-011). Use 'active' or 'inactive'.");
+                            "Status 'suspended' é gerenciado pelo circuit breaker (RF-011). Use 'active' ou 'inactive'.");
                     default:
                         return Results.BadRequest(
-                            $"Invalid status '{request.Status}'. Valid values: 'active', 'inactive'.");
+                            $"Status '{request.Status}' inválido. Valores aceitos: 'active', 'inactive'.");
                 }
+            }
+
+            if (request.RemoveAuth == true)
+            {
+                destination.SetAuth(null, null);
+            }
+            else if (request.AuthType is not null || request.Credentials.HasValue)
+            {
+                if (request.AuthType is null)
+                    return Results.BadRequest("'authType' é obrigatório quando 'credentials' é informado.");
+
+                if (!request.Credentials.HasValue)
+                    return Results.BadRequest("'credentials' é obrigatório quando 'authType' é informado.");
+
+                if (!Enum.TryParse<DestinationAuthType>(request.AuthType, ignoreCase: true, out var parsedType))
+                    return Results.BadRequest(
+                        $"AuthType '{request.AuthType}' inválido. Valores aceitos: ApiKey, BearerToken, JwtBearer, BasicAuth.");
+
+                var validationError = ValidateCredentials(parsedType, request.Credentials.Value);
+                if (validationError is not null)
+                    return Results.BadRequest(validationError);
+
+                destination.SetAuth(parsedType, encryption.Encrypt(request.Credentials.Value.GetRawText()));
             }
         }
         catch (ArgumentException ex)
@@ -97,5 +125,32 @@ public class UpdateDestinationEndpoint : IEndpoint
 
         return Results.Ok(DestinationResponse.From(destination));
     }
-}
 
+    private static string? ValidateCredentials(DestinationAuthType authType, JsonElement credentials)
+    {
+        return authType switch
+        {
+            DestinationAuthType.ApiKey =>
+                RequireStrings(credentials, "key", "headerName"),
+            DestinationAuthType.BearerToken =>
+                RequireStrings(credentials, "token"),
+            DestinationAuthType.JwtBearer =>
+                RequireStrings(credentials, "clientId", "clientSecret", "tokenUrl"),
+            DestinationAuthType.BasicAuth =>
+                RequireStrings(credentials, "username", "password"),
+            _ => $"AuthType '{authType}' não suportado."
+        };
+    }
+
+    private static string? RequireStrings(JsonElement json, params string[] fields)
+    {
+        foreach (var field in fields)
+        {
+            if (!json.TryGetProperty(field, out var prop) ||
+                prop.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(prop.GetString()))
+                return $"Campo '{field}' é obrigatório e não pode ser vazio para o tipo de autenticação informado.";
+        }
+        return null;
+    }
+}

@@ -98,7 +98,9 @@ public class CreateEventEndpoint : IEndpoint
             DestinationUrlId: evento.DestinationUrlId,
             DestinationUrl: destination.Url,
             Payload: evento.Payload,
-            RetryCount: evento.CurrentRetryCount
+            RetryCount: evento.CurrentRetryCount,
+            AuthType: destination.AuthType.HasValue ? (int)destination.AuthType.Value : null,
+            CredentialsEncrypted: destination.CredentialsEncrypted
         ), ct);
 
         return Results.Accepted(

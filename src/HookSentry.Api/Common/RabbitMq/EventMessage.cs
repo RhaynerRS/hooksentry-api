@@ -6,5 +6,7 @@ public sealed record EventMessage(
     Guid DestinationUrlId,
     string DestinationUrl,
     string Payload,
-    int RetryCount
+    int RetryCount,
+    int? AuthType,
+    string? CredentialsEncrypted
 );

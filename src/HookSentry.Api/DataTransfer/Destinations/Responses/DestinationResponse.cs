@@ -8,9 +8,11 @@ public record DestinationResponse(
     string Url,
     string Status,
     int ServerRateLimit,
+    string? AuthType,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
     public static DestinationResponse From(DestinationUrl d) =>
-        new(d.Id, d.TenantId, d.Url, d.Status.ToString(), d.ServerRateLimit, d.CreatedAt, d.UpdatedAt);
+        new(d.Id, d.TenantId, d.Url, d.Status.ToString(), d.ServerRateLimit,
+            d.AuthType?.ToString(), d.CreatedAt, d.UpdatedAt);
 }

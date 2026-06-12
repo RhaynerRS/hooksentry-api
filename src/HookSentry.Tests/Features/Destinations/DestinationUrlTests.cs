@@ -540,4 +540,119 @@ public class DestinationUrlTests
             Assert.Equal(createdAtOriginal, dest.CreatedAt);
         }
     }
+
+    public class MetodoSetAuth
+    {
+        private const string ValidEncrypted = "credencial-criptografada";
+
+        [Fact]
+        public void Deve_Atribuir_AuthType_E_Credenciais()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            dest.SetAuth(DestinationAuthType.ApiKey, ValidEncrypted);
+
+            Assert.Equal(DestinationAuthType.ApiKey, dest.AuthType);
+            Assert.Equal(ValidEncrypted, dest.CredentialsEncrypted);
+        }
+
+        [Theory]
+        [InlineData(DestinationAuthType.ApiKey)]
+        [InlineData(DestinationAuthType.BearerToken)]
+        [InlineData(DestinationAuthType.JwtBearer)]
+        [InlineData(DestinationAuthType.BasicAuth)]
+        public void Deve_Aceitar_Todos_Os_Tipos_De_Auth(DestinationAuthType authType)
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            dest.SetAuth(authType, ValidEncrypted);
+
+            Assert.Equal(authType, dest.AuthType);
+        }
+
+        [Fact]
+        public void Deve_Permitir_Remover_Auth_Com_Null_Null()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            dest.SetAuth(DestinationAuthType.BearerToken, ValidEncrypted);
+
+            dest.SetAuth(null, null);
+
+            Assert.Null(dest.AuthType);
+            Assert.Null(dest.CredentialsEncrypted);
+        }
+
+        [Fact]
+        public void Deve_Atualizar_UpdatedAt()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            Thread.Sleep(20);
+            var antes = DateTimeOffset.UtcNow;
+
+            dest.SetAuth(DestinationAuthType.BasicAuth, ValidEncrypted);
+
+            Assert.True(dest.UpdatedAt >= antes);
+        }
+
+        [Fact]
+        public void Nao_Deve_Alterar_CreatedAt()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            var createdAtOriginal = dest.CreatedAt;
+            Thread.Sleep(20);
+
+            dest.SetAuth(DestinationAuthType.BearerToken, ValidEncrypted);
+
+            Assert.Equal(createdAtOriginal, dest.CreatedAt);
+        }
+
+        [Fact]
+        public void Deve_Lancar_Excecao_Quando_AuthType_Definido_Sem_Credenciais()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            Assert.Throws<ArgumentException>(() =>
+                dest.SetAuth(DestinationAuthType.ApiKey, null));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Deve_Lancar_Excecao_Quando_Credenciais_Forem_Vazias_Com_AuthType(string credencial)
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            Assert.Throws<ArgumentException>(() =>
+                dest.SetAuth(DestinationAuthType.ApiKey, credencial));
+        }
+
+        [Fact]
+        public void Deve_Lancar_Excecao_Quando_Credenciais_Fornecidas_Sem_AuthType()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            Assert.Throws<ArgumentException>(() =>
+                dest.SetAuth(null, ValidEncrypted));
+        }
+
+        [Fact]
+        public void Nao_Deve_Alterar_Url()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            dest.SetAuth(DestinationAuthType.BasicAuth, ValidEncrypted);
+
+            Assert.Equal(ValidUrl, dest.Url);
+        }
+
+        [Fact]
+        public void Nao_Deve_Alterar_Status()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            dest.SetAuth(DestinationAuthType.JwtBearer, ValidEncrypted);
+
+            Assert.Equal(DestinationUrlStatus.Active, dest.Status);
+        }
+    }
 }

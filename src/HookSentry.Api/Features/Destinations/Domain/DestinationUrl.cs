@@ -7,6 +7,8 @@ public class DestinationUrl
     public virtual string Url { get; protected set; } = default!;
     public virtual DestinationUrlStatus Status { get; protected set; }
     public virtual int ServerRateLimit { get; protected set; }
+    public virtual DestinationAuthType? AuthType { get; protected set; }
+    public virtual string? CredentialsEncrypted { get; protected set; }
     public virtual DateTimeOffset CreatedAt { get; protected set; }
     public virtual DateTimeOffset UpdatedAt { get; protected set; }
 
@@ -75,6 +77,21 @@ public class DestinationUrl
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("URL deve ser um endereço HTTPS válido.", nameof(url));
+    }
+
+    public virtual void SetAuth(DestinationAuthType? authType, string? credentialsEncrypted)
+    {
+        if (authType.HasValue && string.IsNullOrWhiteSpace(credentialsEncrypted))
+            throw new ArgumentException(
+                "Credenciais criptografadas são obrigatórias quando AuthType é definido.", nameof(credentialsEncrypted));
+
+        if (!authType.HasValue && !string.IsNullOrWhiteSpace(credentialsEncrypted))
+            throw new ArgumentException(
+                "AuthType é obrigatório quando credenciais são fornecidas.", nameof(authType));
+
+        AuthType = authType;
+        CredentialsEncrypted = credentialsEncrypted;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     private static void ValidateServerRateLimit(int limit)

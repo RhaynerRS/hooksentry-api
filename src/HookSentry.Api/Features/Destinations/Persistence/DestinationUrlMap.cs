@@ -16,6 +16,8 @@ public class DestinationUrlMap : ClassMap<DestinationUrl>
         Map(x => x.Url, "url").Not.Nullable();
         Map(x => x.Status, "status").Not.Nullable().CustomType<DestinationUrlStatus>();
         Map(x => x.ServerRateLimit, "server_rate_limit").Not.Nullable();
+        Map(x => x.AuthType, "auth_type").Nullable().CustomType<DestinationAuthType>();
+        Map(x => x.CredentialsEncrypted, "credentials_encrypted").Nullable();
         Map(x => x.CreatedAt, "created_at").Not.Nullable();
         Map(x => x.UpdatedAt, "updated_at").Not.Nullable();
     }

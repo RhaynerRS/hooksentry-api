@@ -9,7 +9,7 @@ builder.Services
     .AddEndpoints()
     .AddPersistence(builder.Configuration)
     .AddRedis(builder.Configuration)
-    .AddSecurity()
+    .AddSecurity(builder.Configuration)
     .AddJwtAndApiKeyAuth(builder.Configuration)
     .AddSwaggerWithAuth()
     .AddRabbitMq(builder.Configuration);

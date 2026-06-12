@@ -8,5 +8,6 @@ public enum EventStatus
     Failed = 3,
     WaitingRetry = 4,
     CriticalFailure = 5,
-    Cancelled = 6
+    Cancelled = 6,
+    AuthenticationFailed = 7
 }

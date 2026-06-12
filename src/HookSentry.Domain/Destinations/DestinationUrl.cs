@@ -9,6 +9,7 @@ public class DestinationUrl
     public virtual int ServerRateLimit { get; protected set; }
     public virtual DestinationAuthType? AuthType { get; protected set; }
     public virtual string? CredentialsEncrypted { get; protected set; }
+    public virtual string? IngestTokenHash { get; protected set; }
     public virtual DateTimeOffset CreatedAt { get; protected set; }
     public virtual DateTimeOffset UpdatedAt { get; protected set; }
 
@@ -82,6 +83,22 @@ public class DestinationUrl
         AuthType = authType;
         CredentialsEncrypted = credentialsEncrypted;
         UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public virtual string RotateIngestToken()
+    {
+        var rawBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        var rawToken = Convert.ToHexString(rawBytes).ToLowerInvariant();
+        IngestTokenHash = HashToken(rawToken);
+        UpdatedAt = DateTimeOffset.UtcNow;
+        return rawToken;
+    }
+
+    public static string HashToken(string rawToken)
+    {
+        var hashBytes = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(rawToken));
+        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
     private static void ValidateUrl(string url)

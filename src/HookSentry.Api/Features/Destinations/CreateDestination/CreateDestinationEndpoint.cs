@@ -34,6 +34,9 @@ public class CreateDestinationEndpoint : IEndpoint
 
                 As credenciais são criptografadas com AES-256-GCM antes de persistir. Nunca são retornadas em respostas.
 
+                O `ingestToken` retornado no `201` é exibido **uma única vez** — guarde-o para configurar
+                o webhook no serviço externo. Use `POST /api/v1/destinations/{id}/ingest-token` para reger.
+
                 **Códigos de retorno:**
                 - `201 Created`: URL de destino criada
                 - `400 Bad Request`: URL inválida, credenciais malformadas ou authType desconhecido
@@ -41,7 +44,7 @@ public class CreateDestinationEndpoint : IEndpoint
                 - `404 Not Found`: tenant não encontrado
                 """)
             .RequireAuthorization()
-            .Produces<DestinationResponse>(StatusCodes.Status201Created)
+            .Produces<CreateDestinationResponse>(StatusCodes.Status201Created)
             .Produces<string>(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
@@ -84,10 +87,12 @@ public class CreateDestinationEndpoint : IEndpoint
         }
 
         DestinationUrl destination;
+        string rawToken;
         try
         {
             destination = new DestinationUrl(tenantId, request.Url, request.ServerRateLimit);
             destination.SetAuth(authType, credentialsEncrypted);
+            rawToken = destination.RotateIngestToken();
         }
         catch (ArgumentException ex)
         {
@@ -100,6 +105,6 @@ public class CreateDestinationEndpoint : IEndpoint
 
         return Results.Created(
             $"/api/v1/destinations/{destination.Id}",
-            DestinationResponse.From(destination));
+            CreateDestinationResponse.From(destination, rawToken));
     }
 }

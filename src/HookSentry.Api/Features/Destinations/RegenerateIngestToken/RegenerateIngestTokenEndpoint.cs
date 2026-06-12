@@ -1,0 +1,59 @@
+using System.Security.Claims;
+using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.DataTransfer.Destinations.Responses;
+using HookSentry.Domain.Destinations;
+
+namespace HookSentry.Api.Features.Destinations.RegenerateIngestToken;
+
+public class RegenerateIngestTokenEndpoint : IEndpoint
+{
+    public void MapEndpoints(IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/v1/destinations/{id:guid}/ingest-token", Handle)
+            .WithName("RegenerateIngestToken")
+            .WithTags("Destinations")
+            .WithSummary("Regenera o ingest token de uma URL de destino")
+            .WithDescription("""
+                Gera um novo ingest token para a URL de destino informada, invalidando o anterior.
+
+                O token retornado é exibido **uma única vez** — atualize imediatamente a configuração
+                do webhook no serviço externo antes de fechar esta resposta.
+
+                **Parâmetros de rota:**
+                - `id` *(obrigatório)*: UUID da URL de destino
+
+                **Códigos de retorno:**
+                - `200 OK`: novo ingest token gerado
+                - `401 Unauthorized`: token ausente ou inválido
+                - `403 Forbidden`: URL de destino pertence a outro tenant
+                - `404 Not Found`: URL de destino não encontrada
+                """)
+            .RequireAuthorization()
+            .Produces<IngestTokenResponse>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<IResult> Handle(
+        Guid id,
+        ClaimsPrincipal user,
+        NHibernate.ISession session,
+        CancellationToken ct)
+    {
+        if (user.RequireTenantId(out var tenantId) is { } err) return err;
+
+        using var tx = session.BeginTransaction();
+
+        var destination = await session.GetAsync<DestinationUrl>(id, ct);
+        if (destination is null) return Results.NotFound();
+        if (destination.TenantId != tenantId) return Results.Forbid();
+
+        var rawToken = destination.RotateIngestToken();
+
+        await tx.CommitAsync(ct);
+
+        return Results.Ok(new IngestTokenResponse(rawToken));
+    }
+}

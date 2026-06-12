@@ -18,6 +18,7 @@ public class DestinationUrlMap : ClassMap<DestinationUrl>
         Map(x => x.ServerRateLimit, "server_rate_limit").Not.Nullable();
         Map(x => x.AuthType, "auth_type").Nullable().CustomType<DestinationAuthType>();
         Map(x => x.CredentialsEncrypted, "credentials_encrypted").Nullable();
+        Map(x => x.IngestTokenHash, "ingest_token_hash").Nullable();
         Map(x => x.CreatedAt, "created_at").Not.Nullable();
         Map(x => x.UpdatedAt, "updated_at").Not.Nullable();
     }

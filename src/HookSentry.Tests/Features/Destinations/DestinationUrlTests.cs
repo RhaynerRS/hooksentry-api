@@ -541,6 +541,106 @@ public class DestinationUrlTests
         }
     }
 
+    public class MetodoRotateIngestToken
+    {
+        [Fact]
+        public void Deve_Retornar_Token_Nao_Vazio()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var token = dest.RotateIngestToken();
+
+            Assert.False(string.IsNullOrWhiteSpace(token));
+        }
+
+        [Fact]
+        public void Token_Retornado_Deve_Ter_64_Chars()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var token = dest.RotateIngestToken();
+
+            Assert.Equal(64, token.Length);
+        }
+
+        [Fact]
+        public void Deve_Setar_IngestTokenHash()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            dest.RotateIngestToken();
+
+            Assert.False(string.IsNullOrWhiteSpace(dest.IngestTokenHash));
+        }
+
+        [Fact]
+        public void IngestTokenHash_Deve_Ser_Diferente_Do_Token_Bruto()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var rawToken = dest.RotateIngestToken();
+
+            Assert.NotEqual(rawToken, dest.IngestTokenHash);
+        }
+
+        [Fact]
+        public void IngestTokenHash_Deve_Ser_SHA256_Do_Token_Bruto()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var rawToken = dest.RotateIngestToken();
+
+            Assert.Equal(DestinationUrl.HashToken(rawToken), dest.IngestTokenHash);
+        }
+
+        [Fact]
+        public void Dois_Tokens_Devem_Ser_Diferentes()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var token1 = dest.RotateIngestToken();
+            var token2 = dest.RotateIngestToken();
+
+            Assert.NotEqual(token1, token2);
+        }
+
+        [Fact]
+        public void Segunda_Chamada_Deve_Atualizar_Hash()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            dest.RotateIngestToken();
+            var hashAnterior = dest.IngestTokenHash;
+
+            dest.RotateIngestToken();
+
+            Assert.NotEqual(hashAnterior, dest.IngestTokenHash);
+        }
+
+        [Fact]
+        public void Deve_Atualizar_UpdatedAt()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            Thread.Sleep(20);
+            var antes = DateTimeOffset.UtcNow;
+
+            dest.RotateIngestToken();
+
+            Assert.True(dest.UpdatedAt >= antes);
+        }
+
+        [Fact]
+        public void Nao_Deve_Alterar_CreatedAt()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+            var createdAtOriginal = dest.CreatedAt;
+            Thread.Sleep(20);
+
+            dest.RotateIngestToken();
+
+            Assert.Equal(createdAtOriginal, dest.CreatedAt);
+        }
+    }
+
     public class MetodoSetAuth
     {
         private const string ValidEncrypted = "credencial-criptografada";

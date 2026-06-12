@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Domain.Destinations;
 
 namespace HookSentry.Api.Features.Destinations;
@@ -30,13 +31,13 @@ internal static class CredentialValidator
         var headerName = json.GetProperty("headerName").GetString()!;
         if (headerName.Length > MaxHeaderNameLength)
             return $"'headerName' não pode exceder {MaxHeaderNameLength} caracteres.";
-        if (!IsValidHttpHeaderName(headerName))
+        if (!InputSanitizer.IsValidHttpHeaderName(headerName))
             return "'headerName' contém caracteres inválidos. Use apenas letras, dígitos e hífens.";
 
         var value = json.GetProperty("value").GetString()!;
         if (value.Length > MaxHeaderValueLength)
             return $"'value' não pode exceder {MaxHeaderValueLength} caracteres.";
-        if (HasControlChars(value))
+        if (InputSanitizer.HasControlChars(value))
             return "'value' não pode conter caracteres de controle (\\r, \\n, \\0).";
 
         return null;
@@ -50,7 +51,7 @@ internal static class CredentialValidator
         var token = json.GetProperty("token").GetString()!;
         if (token.Length > MaxTokenLength)
             return $"'token' não pode exceder {MaxTokenLength} caracteres.";
-        if (HasControlChars(token))
+        if (InputSanitizer.HasControlChars(token))
             return "'token' não pode conter caracteres de controle (\\r, \\n, \\0).";
 
         return null;
@@ -62,19 +63,19 @@ internal static class CredentialValidator
         if (err is not null) return err;
 
         var tokenEndpoint = json.GetProperty("tokenEndpoint").GetString()!;
-        if (!IsValidHttpsUrl(tokenEndpoint, MaxUrlLength, out var urlErr))
-            return urlErr;
+        var urlErr = ValidateHttpsUrl(tokenEndpoint, MaxUrlLength, "tokenEndpoint");
+        if (urlErr is not null) return urlErr;
 
         var clientId = json.GetProperty("clientId").GetString()!;
         if (clientId.Length > MaxIdentifierLength)
             return $"'clientId' não pode exceder {MaxIdentifierLength} caracteres.";
-        if (HasControlChars(clientId))
+        if (InputSanitizer.HasControlChars(clientId))
             return "'clientId' não pode conter caracteres de controle.";
 
         var clientSecret = json.GetProperty("clientSecret").GetString()!;
         if (clientSecret.Length > MaxIdentifierLength)
             return $"'clientSecret' não pode exceder {MaxIdentifierLength} caracteres.";
-        if (HasControlChars(clientSecret))
+        if (InputSanitizer.HasControlChars(clientSecret))
             return "'clientSecret' não pode conter caracteres de controle.";
 
         if (json.TryGetProperty("scope", out var scopeProp) &&
@@ -83,7 +84,7 @@ internal static class CredentialValidator
             var scope = scopeProp.GetString()!;
             if (scope.Length > MaxScopeLength)
                 return $"'scope' não pode exceder {MaxScopeLength} caracteres.";
-            if (HasControlChars(scope))
+            if (InputSanitizer.HasControlChars(scope))
                 return "'scope' não pode conter caracteres de controle.";
         }
 
@@ -98,7 +99,7 @@ internal static class CredentialValidator
         var username = json.GetProperty("username").GetString()!;
         if (username.Length > MaxIdentifierLength)
             return $"'username' não pode exceder {MaxIdentifierLength} caracteres.";
-        if (HasControlChars(username))
+        if (InputSanitizer.HasControlChars(username))
             return "'username' não pode conter caracteres de controle.";
         if (username.Contains(':'))
             return "'username' não pode conter ':' (RFC 7617 — Basic Auth não suporta dois-pontos no username).";
@@ -106,7 +107,7 @@ internal static class CredentialValidator
         var password = json.GetProperty("password").GetString()!;
         if (password.Length > MaxIdentifierLength)
             return $"'password' não pode exceder {MaxIdentifierLength} caracteres.";
-        if (HasControlChars(password))
+        if (InputSanitizer.HasControlChars(password))
             return "'password' não pode conter caracteres de controle.";
 
         return null;
@@ -124,26 +125,13 @@ internal static class CredentialValidator
         return null;
     }
 
-    private static bool HasControlChars(string value) =>
-        value.Any(c => c is '\r' or '\n' or '\0');
-
-    private static bool IsValidHttpHeaderName(string name) =>
-        name.Length > 0 && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
-
-    private static bool IsValidHttpsUrl(string url, int maxLength, out string? error)
+    private static string? ValidateHttpsUrl(string url, int maxLength, string fieldName)
     {
         if (url.Length > maxLength)
-        {
-            error = $"'tokenEndpoint' não pode exceder {maxLength} caracteres.";
-            return false;
-        }
+            return $"'{fieldName}' não pode exceder {maxLength} caracteres.";
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
             !uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
-        {
-            error = "'tokenEndpoint' deve ser uma URL HTTPS válida (SSRF: URLs não-HTTPS não são aceitas).";
-            return false;
-        }
-        error = null;
-        return true;
+            return $"'{fieldName}' deve ser uma URL HTTPS válida (SSRF: URLs não-HTTPS não são aceitas).";
+        return null;
     }
 }

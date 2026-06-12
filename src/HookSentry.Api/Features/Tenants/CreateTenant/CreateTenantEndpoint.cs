@@ -1,4 +1,5 @@
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Tenants.Requests;
 using HookSentry.Api.DataTransfer.Tenants.Responses;
@@ -46,6 +47,11 @@ public class CreateTenantEndpoint : IEndpoint
         NHibernate.ISession session,
         CancellationToken ct)
     {
+        if (InputSanitizer.ValidateName(request.Name) is { } nameErr)
+            return Results.BadRequest(nameErr);
+        if (InputSanitizer.ValidateEmail(request.AdminEmail) is { } emailErr)
+            return Results.BadRequest(emailErr);
+
         var nameExists = await session.Query<Tenant>()
             .AnyAsync(t => t.Name == request.Name, ct);
 

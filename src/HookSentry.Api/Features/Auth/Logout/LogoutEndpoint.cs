@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Api.DataTransfer.Auth.Requests;
 using StackExchange.Redis;
 
@@ -40,6 +41,8 @@ public class LogoutEndpoint : IEndpoint
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
             return Results.BadRequest("RefreshToken é obrigatório.");
+        if (InputSanitizer.ValidateToken(request.RefreshToken) is { } tokenErr)
+            return Results.BadRequest(tokenErr);
 
         if (!Guid.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value
                            ?? user.FindFirst("sub")?.Value, out var userId))

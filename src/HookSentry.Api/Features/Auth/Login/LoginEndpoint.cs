@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Infrastructure.Security;
 using HookSentry.Api.Common.Services;
 using HookSentry.Api.DataTransfer.Auth.Requests;
@@ -50,6 +51,9 @@ public class LoginEndpoint : IEndpoint
             return Results.BadRequest("Email é obrigatório.");
         if (string.IsNullOrWhiteSpace(request.Password))
             return Results.BadRequest("Senha é obrigatória.");
+
+        if (InputSanitizer.ValidateEmail(request.Email) is { } emailErr)
+            return Results.BadRequest(emailErr);
 
         var user = await session.Query<User>()
             .Where(u => u.Email == request.Email.Trim().ToLowerInvariant())

@@ -1,4 +1,5 @@
 using HookSentry.Api.Common.Endpoints;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Invites.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
@@ -54,6 +55,9 @@ public class RegisterWithInviteEndpoint : IEndpoint
 
         if (invite is null)
             return Results.NotFound("Token de convite não encontrado.");
+
+        if (InputSanitizer.ValidateEmail(request.Email) is { } emailErr)
+            return Results.BadRequest(emailErr);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 

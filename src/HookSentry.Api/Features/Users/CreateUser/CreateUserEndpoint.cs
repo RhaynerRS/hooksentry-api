@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Users.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
@@ -52,6 +53,9 @@ public class CreateUserEndpoint : IEndpoint
         CancellationToken ct)
     {
         if (principal.RequireTenantId(out var tenantId) is { } err) return err;
+
+        if (InputSanitizer.ValidateEmail(request.Email) is { } emailErr)
+            return Results.BadRequest(emailErr);
 
         var tenant = await session.GetAsync<Tenant>(tenantId, ct);
         if (tenant is null)

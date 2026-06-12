@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Api.Common.Services;
 using HookSentry.Api.DataTransfer.Auth.Requests;
 using HookSentry.Api.DataTransfer.Auth.Responses;
@@ -44,6 +45,8 @@ public class RefreshTokenEndpoint : IEndpoint
     {
         if (string.IsNullOrWhiteSpace(request.RefreshToken))
             return Results.BadRequest("RefreshToken é obrigatório.");
+        if (InputSanitizer.ValidateToken(request.RefreshToken) is { } tokenErr)
+            return Results.BadRequest(tokenErr);
 
         var db = redis.GetDatabase();
         var value = await db.StringGetDeleteAsync($"{AuthExtensions.RefreshKeyPrefix}{request.RefreshToken}");

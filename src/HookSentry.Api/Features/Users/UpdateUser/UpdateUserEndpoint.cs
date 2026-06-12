@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
+using HookSentry.Api.Common.Validation;
 using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Users.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
@@ -66,6 +67,9 @@ public class UpdateUserEndpoint : IEndpoint
 
         if (request.Email is not null)
         {
+            if (InputSanitizer.ValidateEmail(request.Email) is { } emailErr)
+                return Results.BadRequest(emailErr);
+
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
             var emailTaken = await session.Query<User>()
                 .AnyAsync(u => u.Email == normalizedEmail && u.Id != id, ct);

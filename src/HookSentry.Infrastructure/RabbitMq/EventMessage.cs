@@ -10,6 +10,7 @@ public sealed record EventMessage(
     string Payload,
     int RetryCount,
     int MaxTrys,
+    string WebhookSecret,
     DestinationAuthType? AuthType,
     string? CredentialsEncrypted
 );

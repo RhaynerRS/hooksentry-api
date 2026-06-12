@@ -179,6 +179,7 @@ public class IngestEndpoint : IEndpoint
             Payload: evento.Payload,
             RetryCount: evento.CurrentRetryCount,
             MaxTrys: tenant.MaxTrys,
+            WebhookSecret: tenant.WebhookSecret,
             AuthType: authType,
             CredentialsEncrypted: credentialsEncrypted
         ), ct);

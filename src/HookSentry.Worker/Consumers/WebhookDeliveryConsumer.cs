@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using HookSentry.Domain.Destinations;
@@ -76,6 +77,9 @@ public sealed class WebhookDeliveryConsumer(
 
                 using var httpClient = new HttpClient();
                 await ApplyAuthAsync(httpClient, message);
+
+                var signature = ComputeSignature(message.WebhookSecret, message.Payload);
+                httpClient.DefaultRequestHeaders.Add("X-HookSentry-Signature", signature);
 
                 var content = new StringContent(message.Payload, Encoding.UTF8, "application/json");
                 var response = await httpClient.PostAsync(message.DestinationUrl, content, stoppingToken);
@@ -162,6 +166,14 @@ public sealed class WebhookDeliveryConsumer(
         logger.LogInformation("WebhookDeliveryConsumer listening on 'webhooks.delivery'...");
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+
+    private static string ComputeSignature(string secret, string payload)
+    {
+        var keyBytes  = Encoding.UTF8.GetBytes(secret);
+        var dataBytes = Encoding.UTF8.GetBytes(payload);
+        var hash      = HMACSHA256.HashData(keyBytes, dataBytes);
+        return "sha256=" + Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static async Task DeclareDelayQueuesAsync(IChannel channel, CancellationToken ct)

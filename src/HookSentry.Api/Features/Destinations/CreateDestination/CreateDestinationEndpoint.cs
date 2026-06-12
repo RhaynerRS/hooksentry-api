@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
 using HookSentry.Infrastructure.Security;
@@ -28,9 +27,9 @@ public class CreateDestinationEndpoint : IEndpoint
                 - `credentials` *(obrigatório se authType informado)*: objeto JSON com as credenciais (RF-019)
 
                 **Estrutura de `credentials` por tipo:**
-                - `ApiKey`: `{ "key": "...", "headerName": "X-Api-Key" }`
+                - `ApiKey`: `{ "headerName": "X-Api-Key", "value": "..." }`
                 - `BearerToken`: `{ "token": "..." }`
-                - `JwtBearer`: `{ "clientId": "...", "clientSecret": "...", "tokenUrl": "...", "scope": "..." }`
+                - `JwtBearer`: `{ "tokenEndpoint": "https://...", "clientId": "...", "clientSecret": "...", "scope": "..." }`
                 - `BasicAuth`: `{ "username": "...", "password": "..." }`
 
                 As credenciais são criptografadas com AES-256-GCM antes de persistir. Nunca são retornadas em respostas.
@@ -76,7 +75,7 @@ public class CreateDestinationEndpoint : IEndpoint
                 return Results.BadRequest(
                     $"AuthType '{request.AuthType}' inválido. Valores aceitos: ApiKey, BearerToken, JwtBearer, BasicAuth.");
 
-            var validationError = ValidateCredentials(parsedType, request.Credentials.Value);
+            var validationError = CredentialValidator.Validate(parsedType, request.Credentials.Value);
             if (validationError is not null)
                 return Results.BadRequest(validationError);
 
@@ -102,33 +101,5 @@ public class CreateDestinationEndpoint : IEndpoint
         return Results.Created(
             $"/api/v1/destinations/{destination.Id}",
             DestinationResponse.From(destination));
-    }
-
-    private static string? ValidateCredentials(DestinationAuthType authType, JsonElement credentials)
-    {
-        return authType switch
-        {
-            DestinationAuthType.ApiKey =>
-                RequireStrings(credentials, "key", "headerName"),
-            DestinationAuthType.BearerToken =>
-                RequireStrings(credentials, "token"),
-            DestinationAuthType.JwtBearer =>
-                RequireStrings(credentials, "clientId", "clientSecret", "tokenUrl"),
-            DestinationAuthType.BasicAuth =>
-                RequireStrings(credentials, "username", "password"),
-            _ => $"AuthType '{authType}' não suportado."
-        };
-    }
-
-    private static string? RequireStrings(JsonElement json, params string[] fields)
-    {
-        foreach (var field in fields)
-        {
-            if (!json.TryGetProperty(field, out var prop) ||
-                prop.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(prop.GetString()))
-                return $"Campo '{field}' é obrigatório e não pode ser vazio para o tipo de autenticação informado.";
-        }
-        return null;
     }
 }

@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
 using HookSentry.Infrastructure.Security;
@@ -109,7 +108,7 @@ public class UpdateDestinationEndpoint : IEndpoint
                     return Results.BadRequest(
                         $"AuthType '{request.AuthType}' inválido. Valores aceitos: ApiKey, BearerToken, JwtBearer, BasicAuth.");
 
-                var validationError = ValidateCredentials(parsedType, request.Credentials.Value);
+                var validationError = CredentialValidator.Validate(parsedType, request.Credentials.Value);
                 if (validationError is not null)
                     return Results.BadRequest(validationError);
 
@@ -124,33 +123,5 @@ public class UpdateDestinationEndpoint : IEndpoint
         await tx.CommitAsync(ct);
 
         return Results.Ok(DestinationResponse.From(destination));
-    }
-
-    private static string? ValidateCredentials(DestinationAuthType authType, JsonElement credentials)
-    {
-        return authType switch
-        {
-            DestinationAuthType.ApiKey =>
-                RequireStrings(credentials, "key", "headerName"),
-            DestinationAuthType.BearerToken =>
-                RequireStrings(credentials, "token"),
-            DestinationAuthType.JwtBearer =>
-                RequireStrings(credentials, "clientId", "clientSecret", "tokenUrl"),
-            DestinationAuthType.BasicAuth =>
-                RequireStrings(credentials, "username", "password"),
-            _ => $"AuthType '{authType}' não suportado."
-        };
-    }
-
-    private static string? RequireStrings(JsonElement json, params string[] fields)
-    {
-        foreach (var field in fields)
-        {
-            if (!json.TryGetProperty(field, out var prop) ||
-                prop.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(prop.GetString()))
-                return $"Campo '{field}' é obrigatório e não pode ser vazio para o tipo de autenticação informado.";
-        }
-        return null;
     }
 }

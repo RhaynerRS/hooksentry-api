@@ -1,3 +1,4 @@
+using HookSentry.Domain.Common;
 using HookSentry.Domain.Destinations;
 
 namespace HookSentry.Tests.Features.Destinations;
@@ -554,13 +555,23 @@ public class DestinationUrlTests
         }
 
         [Fact]
-        public void Token_Retornado_Deve_Ter_64_Chars()
+        public void Token_Retornado_Deve_Comecar_Com_Prefixo_Dst()
         {
             var dest = new DestinationUrl(ValidTenantId, ValidUrl);
 
             var token = dest.RotateIngestToken();
 
-            Assert.Equal(64, token.Length);
+            Assert.StartsWith(IngestToken.DestinationPrefix, token);
+        }
+
+        [Fact]
+        public void Token_Retornado_Deve_Ter_68_Chars()
+        {
+            var dest = new DestinationUrl(ValidTenantId, ValidUrl);
+
+            var token = dest.RotateIngestToken();
+
+            Assert.Equal(68, token.Length);
         }
 
         [Fact]
@@ -590,7 +601,7 @@ public class DestinationUrlTests
 
             var rawToken = dest.RotateIngestToken();
 
-            Assert.Equal(DestinationUrl.HashToken(rawToken), dest.IngestTokenHash);
+            Assert.Equal(IngestToken.Hash(rawToken), dest.IngestTokenHash);
         }
 
         [Fact]

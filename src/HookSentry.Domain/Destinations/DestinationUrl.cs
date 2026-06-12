@@ -1,3 +1,5 @@
+using HookSentry.Domain.Common;
+
 namespace HookSentry.Domain.Destinations;
 
 public class DestinationUrl
@@ -87,18 +89,10 @@ public class DestinationUrl
 
     public virtual string RotateIngestToken()
     {
-        var rawBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
-        var rawToken = Convert.ToHexString(rawBytes).ToLowerInvariant();
-        IngestTokenHash = HashToken(rawToken);
+        var (rawToken, hash) = IngestToken.Generate(IngestToken.DestinationPrefix);
+        IngestTokenHash = hash;
         UpdatedAt = DateTimeOffset.UtcNow;
         return rawToken;
-    }
-
-    public static string HashToken(string rawToken)
-    {
-        var hashBytes = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(rawToken));
-        return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
     private static void ValidateUrl(string url)

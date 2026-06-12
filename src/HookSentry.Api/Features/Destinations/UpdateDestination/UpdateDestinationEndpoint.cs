@@ -2,10 +2,10 @@ using System.Security.Claims;
 using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Common.Security;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Destinations.Requests;
 using HookSentry.Api.DataTransfer.Destinations.Responses;
-using HookSentry.Api.Features.Destinations.Domain;
+using HookSentry.Domain.Destinations;
 
 namespace HookSentry.Api.Features.Destinations.UpdateDestination;
 

@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Tenants.Domain;
+using HookSentry.Domain.Tenants;
 
 namespace HookSentry.Tests.Features.Tenants;
 

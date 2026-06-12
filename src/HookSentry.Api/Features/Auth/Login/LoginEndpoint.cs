@@ -1,11 +1,11 @@
 using System.Security.Cryptography;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Common.Security;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Api.Common.Services;
 using HookSentry.Api.DataTransfer.Auth.Requests;
 using HookSentry.Api.DataTransfer.Auth.Responses;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 using NHibernate.Linq;
 using StackExchange.Redis;
 

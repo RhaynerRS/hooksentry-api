@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 
 namespace HookSentry.Api.DataTransfer.Users.Responses;
 

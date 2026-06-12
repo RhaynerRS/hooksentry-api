@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 
 namespace HookSentry.Api.Common.Extensions;
 

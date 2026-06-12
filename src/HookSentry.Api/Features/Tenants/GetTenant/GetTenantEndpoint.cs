@@ -1,6 +1,6 @@
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.DataTransfer.Tenants.Responses;
-using HookSentry.Api.Features.Tenants.Domain;
+using HookSentry.Domain.Tenants;
 using NHibernate;
 
 namespace HookSentry.Api.Features.Tenants.GetTenant;

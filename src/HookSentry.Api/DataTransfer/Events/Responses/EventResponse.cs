@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Events.Domain;
+using HookSentry.Domain.Events;
 
 namespace HookSentry.Api.DataTransfer.Events.Responses;
 

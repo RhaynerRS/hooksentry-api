@@ -1,9 +1,9 @@
 using HookSentry.Api.Common.Endpoints;
-using HookSentry.Api.Common.Security;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Invites.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
-using HookSentry.Api.Features.Invites.Domain;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Invites;
+using HookSentry.Domain.Users;
 using NHibernate.Linq;
 
 namespace HookSentry.Api.Features.Invites.RegisterWithInvite;

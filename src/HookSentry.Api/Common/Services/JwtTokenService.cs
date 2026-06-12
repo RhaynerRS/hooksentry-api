@@ -1,7 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 using Microsoft.IdentityModel.Tokens;
 
 namespace HookSentry.Api.Common.Services;

@@ -1,24 +1,16 @@
+using HookSentry.Infrastructure.Persistence;
+using HookSentry.Infrastructure.RabbitMq;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Worker.Consumers;
-using HookSentry.Worker.Infrastructure.RabbitMq;
-using HookSentry.Worker.Infrastructure.Security;
 using Microsoft.Extensions.Options;
-using Npgsql;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.Configure<RabbitMqSettings>(
-    builder.Configuration.GetSection("RabbitMq"));
-
+builder.Services.AddPersistence(builder.Configuration);
+builder.Services.AddRabbitMq(builder.Configuration);
 builder.Services.Configure<CredentialEncryptionSettings>(
     builder.Configuration.GetSection("CredentialEncryption"));
-
-var dataSource = NpgsqlDataSource.Create(
-    builder.Configuration.GetConnectionString("DefaultConnection")!);
-builder.Services.AddSingleton(dataSource);
-
-builder.Services.AddSingleton<RabbitMqConnection>();
-builder.Services.AddSingleton<AesCredentialDecryptionService>();
-
+builder.Services.AddSingleton<ICredentialEncryptionService, AesCredentialEncryptionService>();
 builder.Services.AddHostedService<WebhookDeliveryConsumer>();
 
 var host = builder.Build();

@@ -6,7 +6,7 @@ using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.DataTransfer.Invites.Requests;
 using HookSentry.Api.DataTransfer.Invites.Responses;
-using HookSentry.Api.Features.Invites.Domain;
+using HookSentry.Domain.Invites;
 using NHibernate.Linq;
 
 namespace HookSentry.Api.Features.Invites.GetInvites;

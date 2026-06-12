@@ -1,11 +1,11 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Common.RabbitMq;
+using HookSentry.Infrastructure.RabbitMq;
 using HookSentry.Api.DataTransfer.Events.Requests;
 using HookSentry.Api.DataTransfer.Events.Responses;
-using HookSentry.Api.Features.Destinations.Domain;
-using HookSentry.Api.Features.Events.Domain;
+using HookSentry.Domain.Destinations;
+using HookSentry.Domain.Events;
 using NHibernate.Linq;
 
 namespace HookSentry.Api.Features.Events.CreateEvent;
@@ -99,7 +99,7 @@ public class CreateEventEndpoint : IEndpoint
             DestinationUrl: destination.Url,
             Payload: evento.Payload,
             RetryCount: evento.CurrentRetryCount,
-            AuthType: destination.AuthType.HasValue ? (int)destination.AuthType.Value : null,
+            AuthType: destination.AuthType,
             CredentialsEncrypted: destination.CredentialsEncrypted
         ), ct);
 

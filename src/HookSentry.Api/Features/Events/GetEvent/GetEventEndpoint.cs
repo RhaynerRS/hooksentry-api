@@ -2,7 +2,7 @@ using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.DataTransfer.Events.Responses;
-using HookSentry.Api.Features.Events.Domain;
+using HookSentry.Domain.Events;
 namespace HookSentry.Api.Features.Events.GetEvent;
 
 public class GetEventEndpoint : IEndpoint

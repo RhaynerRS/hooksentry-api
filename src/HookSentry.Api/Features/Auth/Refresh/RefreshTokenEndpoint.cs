@@ -4,7 +4,7 @@ using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.Common.Services;
 using HookSentry.Api.DataTransfer.Auth.Requests;
 using HookSentry.Api.DataTransfer.Auth.Responses;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 using StackExchange.Redis;
 
 namespace HookSentry.Api.Features.Auth.Refresh;

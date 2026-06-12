@@ -1,4 +1,4 @@
-using HookSentry.Api.Common.Security;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Api.Common.Services;
 using Microsoft.Extensions.Configuration;
 

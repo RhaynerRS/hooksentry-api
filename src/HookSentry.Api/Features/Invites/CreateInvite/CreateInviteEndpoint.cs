@@ -3,8 +3,8 @@ using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
 using HookSentry.Api.DataTransfer.Invites.Requests;
 using HookSentry.Api.DataTransfer.Invites.Responses;
-using HookSentry.Api.Features.Invites.Domain;
-using HookSentry.Api.Features.Tenants.Domain;
+using HookSentry.Domain.Invites;
+using HookSentry.Domain.Tenants;
 
 namespace HookSentry.Api.Features.Invites.CreateInvite;
 

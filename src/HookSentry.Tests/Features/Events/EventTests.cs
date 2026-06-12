@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Events.Domain;
+using HookSentry.Domain.Events;
 
 namespace HookSentry.Tests.Features.Events;
 

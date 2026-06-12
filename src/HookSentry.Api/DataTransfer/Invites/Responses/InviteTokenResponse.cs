@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Invites.Domain;
+using HookSentry.Domain.Invites;
 
 namespace HookSentry.Api.DataTransfer.Invites.Responses;
 

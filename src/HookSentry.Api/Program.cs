@@ -1,6 +1,7 @@
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Common.RabbitMq;
+using HookSentry.Infrastructure.Persistence;
+using HookSentry.Infrastructure.RabbitMq;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);

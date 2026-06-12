@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 
 namespace HookSentry.Api.Features.Users.DeleteUser;
 

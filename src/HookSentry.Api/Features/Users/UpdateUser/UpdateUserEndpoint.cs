@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
-using HookSentry.Api.Common.Security;
+using HookSentry.Infrastructure.Security;
 using HookSentry.Api.DataTransfer.Users.Requests;
 using HookSentry.Api.DataTransfer.Users.Responses;
-using HookSentry.Api.Features.Users.Domain;
+using HookSentry.Domain.Users;
 using NHibernate.Linq;
 
 namespace HookSentry.Api.Features.Users.UpdateUser;

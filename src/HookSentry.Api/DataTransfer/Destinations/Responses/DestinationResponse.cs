@@ -1,4 +1,4 @@
-using HookSentry.Api.Features.Destinations.Domain;
+using HookSentry.Domain.Destinations;
 
 namespace HookSentry.Api.DataTransfer.Destinations.Responses;
 

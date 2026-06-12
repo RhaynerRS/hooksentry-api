@@ -27,20 +27,6 @@ public sealed class RabbitMqEventPublisher : IEventPublisher
             cancellationToken: ct);
 
         var routingKey = $"tenant.{message.TenantId}.destination.{message.DestinationUrlId}";
-
-        await channel.QueueDeclareAsync(
-            queue: routingKey,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            cancellationToken: ct);
-
-        await channel.QueueBindAsync(
-            queue: routingKey,
-            exchange: _exchange,
-            routingKey: routingKey,
-            cancellationToken: ct);
-
         var body = JsonSerializer.SerializeToUtf8Bytes(message);
 
         await channel.BasicPublishAsync(
@@ -51,4 +37,28 @@ public sealed class RabbitMqEventPublisher : IEventPublisher
             body: body,
             cancellationToken: ct);
     }
+
+    public async Task PublishDelayedAsync(EventMessage message, int retryCount, CancellationToken ct)
+    {
+        await using var channel = await _mqConnection.GetConnection().CreateChannelAsync(cancellationToken: ct);
+        var delayQueue = GetDelayQueue(retryCount);
+        var body = JsonSerializer.SerializeToUtf8Bytes(message);
+
+        await channel.BasicPublishAsync(
+            exchange: "",
+            routingKey: delayQueue,
+            mandatory: false,
+            basicProperties: new BasicProperties { Persistent = true },
+            body: body,
+            cancellationToken: ct);
+    }
+
+    private static string GetDelayQueue(int retryCount) => retryCount switch
+    {
+        1 => "hooksentry.delay.2m",
+        2 => "hooksentry.delay.5m",
+        3 => "hooksentry.delay.15m",
+        4 => "hooksentry.delay.1h",
+        _ => "hooksentry.delay.6h"
+    };
 }

@@ -76,6 +76,24 @@ public class Event
         Status = EventStatus.Cancelled;
     }
 
+    public virtual void MarkSucceeded()
+    {
+        Status = EventStatus.Succeeded;
+        DeliveredAt = DateTimeOffset.UtcNow;
+    }
+
+    public virtual void MarkWaitingRetry(int retryCount, DateTimeOffset nextAttemptAt)
+    {
+        Status = EventStatus.WaitingRetry;
+        CurrentRetryCount = retryCount;
+        NextAttemptAt = nextAttemptAt;
+    }
+
+    public virtual void MarkCriticalFailure()
+    {
+        Status = EventStatus.CriticalFailure;
+    }
+
     public virtual void MarkAuthenticationFailed()
     {
         Status = EventStatus.AuthenticationFailed;

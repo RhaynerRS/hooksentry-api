@@ -17,6 +17,7 @@ public sealed class WebhookDeliveryConsumer(
     RabbitMqConnection mqConnection,
     IOptions<RabbitMqSettings> options,
     ICredentialEncryptionService encryption,
+    IEventPublisher publisher,
     ISessionFactory sessionFactory,
     ILogger<WebhookDeliveryConsumer> logger) : BackgroundService
 {
@@ -47,6 +48,8 @@ public sealed class WebhookDeliveryConsumer(
             exchange: _exchange,
             routingKey: "tenant.#",
             cancellationToken: stoppingToken);
+
+        await DeclareDelayQueuesAsync(channel, stoppingToken);
 
         await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 10, global: false,
             cancellationToken: stoppingToken);
@@ -89,15 +92,64 @@ public sealed class WebhookDeliveryConsumer(
                     return;
                 }
 
-                response.EnsureSuccessStatusCode();
+                if (response.IsSuccessStatusCode)
+                {
+                    await MarkSucceededAsync(message.EventId, stoppingToken);
+                    await channel.BasicAckAsync(ea.DeliveryTag, multiple: false,
+                        cancellationToken: stoppingToken);
+                    return;
+                }
 
-                await channel.BasicAckAsync(ea.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
+                // Falha não-auth: aplicar backoff
+                var nextRetry = message.RetryCount + 1;
+                var nextAt = DateTimeOffset.UtcNow + GetBackoffDuration(nextRetry);
+
+                if (nextRetry >= message.MaxTrys)
+                {
+                    logger.LogWarning(
+                        "Event {EventId} exhausted {MaxTrys} retries. Marking as CriticalFailure.",
+                        message.EventId, message.MaxTrys);
+
+                    await MarkCriticalFailureAsync(message.EventId, stoppingToken);
+                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false,
+                        cancellationToken: stoppingToken);
+                    return;
+                }
+
+                await MarkWaitingRetryAsync(message.EventId, nextRetry, nextAt, stoppingToken);
+                await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false,
+                    cancellationToken: stoppingToken);
+                await publisher.PublishDelayedAsync(
+                    message with { RetryCount = nextRetry }, nextRetry, stoppingToken);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to process message with DeliveryTag {Tag}", ea.DeliveryTag);
-                await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true,
-                    cancellationToken: stoppingToken);
+
+                if (message is not null)
+                {
+                    var nextRetry = message.RetryCount + 1;
+                    var nextAt = DateTimeOffset.UtcNow + GetBackoffDuration(nextRetry);
+
+                    if (nextRetry >= message.MaxTrys)
+                    {
+                        await MarkCriticalFailureAsync(message.EventId, stoppingToken);
+                        await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false,
+                            cancellationToken: stoppingToken);
+                        return;
+                    }
+
+                    await MarkWaitingRetryAsync(message.EventId, nextRetry, nextAt, stoppingToken);
+                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false,
+                        cancellationToken: stoppingToken);
+                    await publisher.PublishDelayedAsync(
+                        message with { RetryCount = nextRetry }, nextRetry, stoppingToken);
+                }
+                else
+                {
+                    await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false,
+                        cancellationToken: stoppingToken);
+                }
             }
         };
 
@@ -111,6 +163,43 @@ public sealed class WebhookDeliveryConsumer(
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
+
+    private static async Task DeclareDelayQueuesAsync(IChannel channel, CancellationToken ct)
+    {
+        var delayQueues = new[]
+        {
+            ("hooksentry.delay.2m",  120_000),
+            ("hooksentry.delay.5m",  300_000),
+            ("hooksentry.delay.15m", 900_000),
+            ("hooksentry.delay.1h",  3_600_000),
+            ("hooksentry.delay.6h",  21_600_000),
+        };
+
+        foreach (var (queue, ttl) in delayQueues)
+        {
+            await channel.QueueDeclareAsync(
+                queue: queue,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: new Dictionary<string, object?>
+                {
+                    ["x-message-ttl"]             = ttl,
+                    ["x-dead-letter-exchange"]    = "hooksentry.events",
+                    ["x-dead-letter-routing-key"] = "tenant.retry"
+                },
+                cancellationToken: ct);
+        }
+    }
+
+    private static TimeSpan GetBackoffDuration(int retryCount) => retryCount switch
+    {
+        1 => TimeSpan.FromMinutes(2),
+        2 => TimeSpan.FromMinutes(5),
+        3 => TimeSpan.FromMinutes(15),
+        4 => TimeSpan.FromHours(1),
+        _ => TimeSpan.FromHours(6)
+    };
 
     private async Task ApplyAuthAsync(HttpClient client, EventMessage message)
     {
@@ -174,11 +263,46 @@ public sealed class WebhookDeliveryConsumer(
         return json.RootElement.GetProperty("access_token").GetString()!;
     }
 
+    private async Task MarkSucceededAsync(Guid eventId, CancellationToken ct)
+    {
+        using var session = sessionFactory.OpenSession();
+        using var tx = session.BeginTransaction();
+        var evento = await session.GetAsync<Event>(eventId, ct);
+        if (evento is not null)
+        {
+            evento.MarkSucceeded();
+            await tx.CommitAsync(ct);
+        }
+    }
+
+    private async Task MarkWaitingRetryAsync(Guid eventId, int retryCount, DateTimeOffset nextAttemptAt, CancellationToken ct)
+    {
+        using var session = sessionFactory.OpenSession();
+        using var tx = session.BeginTransaction();
+        var evento = await session.GetAsync<Event>(eventId, ct);
+        if (evento is not null)
+        {
+            evento.MarkWaitingRetry(retryCount, nextAttemptAt);
+            await tx.CommitAsync(ct);
+        }
+    }
+
+    private async Task MarkCriticalFailureAsync(Guid eventId, CancellationToken ct)
+    {
+        using var session = sessionFactory.OpenSession();
+        using var tx = session.BeginTransaction();
+        var evento = await session.GetAsync<Event>(eventId, ct);
+        if (evento is not null)
+        {
+            evento.MarkCriticalFailure();
+            await tx.CommitAsync(ct);
+        }
+    }
+
     private async Task MarkAuthenticationFailedAsync(Guid eventId, CancellationToken ct)
     {
         using var session = sessionFactory.OpenSession();
         using var tx = session.BeginTransaction();
-
         var evento = await session.GetAsync<Event>(eventId, ct);
         if (evento is not null)
         {

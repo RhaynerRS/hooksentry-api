@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
@@ -8,6 +7,7 @@ using HookSentry.Domain.Common;
 using HookSentry.Domain.Destinations;
 using HookSentry.Domain.Events;
 using HookSentry.Domain.Senders;
+using HookSentry.Domain.Tenants;
 using HookSentry.Infrastructure.RabbitMq;
 using NHibernate.Linq;
 
@@ -17,7 +17,7 @@ public class IngestEndpoint : IEndpoint
 {
     public void MapEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/v1/ingest/{token}", Handle)
+        app.MapPost("/api/v1/ingest/{tenantId:guid}/{token}", Handle)
             .WithName("IngestEvent")
             .WithTags("Ingest")
             .WithSummary("Ingere um evento via ingest token")
@@ -29,14 +29,15 @@ public class IngestEndpoint : IEndpoint
                 - `dst_<token>` — token da URL de destino; payload entregue sem transformação
                 - `sndr_<token>` — token de sender; payload transformado pelo mapeamento configurado (se houver)
 
-                Configure a URL `https://{host}/api/v1/ingest/{token}` diretamente no serviço externo
-                que emite os webhooks — sem necessidade de estruturar o payload.
+                Configure a URL `https://{host}/api/v1/ingest/{tenantId}/{token}` diretamente no serviço
+                externo que emite os webhooks — sem necessidade de estruturar o payload.
 
                 **Parâmetros de rota:**
+                - `tenantId` *(obrigatório)*: UUID do tenant
                 - `token` *(obrigatório)*: ingest token da URL de destino ou do sender
 
                 **Headers:**
-                - `Authorization` *(obrigatório)*: `Bearer <jwt>` com claim `tenant_id`
+                - `X-Api-Key` *(obrigatório)*: chave de API para autenticação
                 - `X-Idempotency-Key` *(opcional)*: chave de até 255 caracteres — se já existir um evento
                   com a mesma chave para este tenant, retorna `200 OK` com os dados do evento original
                   sem reprocessar
@@ -48,12 +49,14 @@ public class IngestEndpoint : IEndpoint
                 - `202 Accepted`: evento aceito para entrega assíncrona
                 - `200 OK`: evento duplicado retornado via idempotency key
                 - `400 Bad Request`: payload inválido ou token com formato inválido
-                - `401 Unauthorized`: token JWT ausente ou inválido
+                - `401 Unauthorized`: API key ausente ou inválida
                 - `403 Forbidden`: ingest token pertence a outro tenant
-                - `404 Not Found`: ingest token não encontrado
+                - `404 Not Found`: ingest token ou tenant não encontrado
                 - `422 Unprocessable Entity`: URL de destino inativa ou suspensa
                 """)
-            .RequireAuthorization()
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(AuthExtensions.ApiKeyScheme)
+                .RequireAuthenticatedUser())
             .Produces<EventAcceptedResponse>(StatusCodes.Status202Accepted)
             .Produces<EventAcceptedResponse>(StatusCodes.Status200OK)
             .Produces<string>(StatusCodes.Status400BadRequest)
@@ -64,16 +67,14 @@ public class IngestEndpoint : IEndpoint
     }
 
     private static async Task<IResult> Handle(
+        Guid tenantId,
         string token,
         [Microsoft.AspNetCore.Mvc.FromBody] JsonElement payload,
-        ClaimsPrincipal user,
         HttpRequest httpRequest,
         NHibernate.ISession session,
         IEventPublisher publisher,
         CancellationToken ct)
     {
-        if (user.RequireTenantId(out var tenantId) is { } err) return err;
-
         if (InputSanitizer.ValidateToken(token) is { } tokenErr)
             return Results.BadRequest(tokenErr);
 
@@ -152,6 +153,10 @@ public class IngestEndpoint : IEndpoint
         string payloadJson, string? idempotencyKey,
         NHibernate.ISession session, IEventPublisher publisher, CancellationToken ct)
     {
+        var tenant = await session.GetAsync<Tenant>(tenantId, ct);
+        if (tenant is null)
+            return Results.NotFound($"Tenant '{tenantId}' not found.");
+
         Event evento;
         try
         {
@@ -173,6 +178,7 @@ public class IngestEndpoint : IEndpoint
             DestinationUrl: destinationUrl,
             Payload: evento.Payload,
             RetryCount: evento.CurrentRetryCount,
+            MaxTrys: tenant.MaxTrys,
             AuthType: authType,
             CredentialsEncrypted: credentialsEncrypted
         ), ct);

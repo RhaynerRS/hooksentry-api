@@ -9,6 +9,7 @@ public sealed record EventMessage(
     string DestinationUrl,
     string Payload,
     int RetryCount,
+    int MaxTrys,
     DestinationAuthType? AuthType,
     string? CredentialsEncrypted
 );

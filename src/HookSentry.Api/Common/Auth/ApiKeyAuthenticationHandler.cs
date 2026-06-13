@@ -11,7 +11,7 @@ namespace HookSentry.Api.Common.Auth;
 
 public class ApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
-    ILoggerFactory logger,
+    Microsoft.Extensions.Logging.ILoggerFactory logger,
     UrlEncoder encoder,
     IApiKeyCacheService cache,
     ISessionFactory sessionFactory) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)

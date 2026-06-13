@@ -1,5 +1,6 @@
 using System.Text;
 using HookSentry.Api.Common.Auth;
+using HookSentry.Infrastructure.ApiKeys;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -13,6 +14,8 @@ public static class AuthExtensions
 
     public static IServiceCollection AddJwtAndApiKeyAuth(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<IApiKeyCacheService, ApiKeyCacheService>();
+
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

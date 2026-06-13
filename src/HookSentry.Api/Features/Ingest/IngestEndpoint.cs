@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using HookSentry.Api.Common.Endpoints;
 using HookSentry.Api.Common.Extensions;
@@ -70,11 +71,15 @@ public class IngestEndpoint : IEndpoint
         Guid tenantId,
         string token,
         [Microsoft.AspNetCore.Mvc.FromBody] JsonElement payload,
+        ClaimsPrincipal user,
         HttpRequest httpRequest,
         NHibernate.ISession session,
         IEventPublisher publisher,
         CancellationToken ct)
     {
+        if (user.RequireTenantId(out var claimTenantId) is null && claimTenantId != tenantId)
+            return Results.Forbid();
+
         if (InputSanitizer.ValidateToken(token) is { } tokenErr)
             return Results.BadRequest(tokenErr);
 

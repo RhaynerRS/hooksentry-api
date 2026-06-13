@@ -1,7 +1,11 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using HookSentry.Domain.ApiKeys;
+using HookSentry.Infrastructure.ApiKeys;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using NHibernate;
+using NHibernate.Linq;
 
 namespace HookSentry.Api.Common.Auth;
 
@@ -9,26 +13,43 @@ public class ApiKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
     UrlEncoder encoder,
-    IConfiguration configuration) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    IApiKeyCacheService cache,
+    ISessionFactory sessionFactory) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     private const string ApiKeyHeaderName = "X-Api-Key";
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.TryGetValue(ApiKeyHeaderName, out var headerValues))
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
 
-        var providedKey = headerValues.ToString();
-        var validKey = configuration["ApiKey:Value"];
+        var rawKey = headerValues.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(rawKey))
+            return AuthenticateResult.NoResult();
 
-        if (string.IsNullOrWhiteSpace(providedKey) || providedKey != validKey)
-            return Task.FromResult(AuthenticateResult.Fail("Invalid API Key."));
+        var hash = ApiKey.ComputeHash(rawKey);
 
-        var claims = new Claim[] { new(ClaimTypes.Name, "api-key-user") };
+        var entry = await cache.GetAsync(hash);
+        if (entry is null)
+        {
+            using var session = sessionFactory.OpenSession();
+            var match = await session.Query<ApiKey>()
+                .Where(k => k.KeyHash == hash && k.IsActive)
+                .Select(k => new { k.TenantId })
+                .FirstOrDefaultAsync();
+
+            if (match is null)
+                return AuthenticateResult.Fail("API key inválida ou revogada.");
+
+            entry = new ApiKeyCacheEntry(match.TenantId);
+            await cache.SetAsync(hash, entry);
+        }
+
+        var claims = new[] { new Claim("tenant_id", entry.TenantId.ToString()) };
         var ticket = new AuthenticationTicket(
             new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name)),
             Scheme.Name);
 
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 }
